@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Word Chain AI - Pro Edition</title>
+    <style>
+        /* Outcome popup + canvas overlay */
+        .outcome-backdrop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10050;padding:12px;background:rgba(0,0,0,0.85);}
+        .outcome-popup{min-width:280px;max-width:500px;background:linear-gradient(180deg,#081018,#0d0d12);color:#eaffff;border-radius:14px;padding:25px;border:1px solid #0ff;box-shadow:0 0 50px rgba(0,255,255,0.3);text-align:center;position:relative;}
+        .outcome-title{font-size:clamp(24px, 5vw, 32px);margin:0 0 10px;color:#0ff;text-transform:uppercase;letter-spacing:2px;}
+        .outcome-msg{color:#bff;margin-bottom:20px;line-height:1.5;font-size: 1.1em;}
+        .canvas-confetti{position: fixed; inset:0; pointer-events:none; z-index:10051; display: none;}
+
+        /* ------- Base Theme ------- */
+        html,body{height:100%;margin:0;background:#000;color:#0ff;font-family: 'Segoe UI', Roboto, sans-serif; overflow-x: hidden;}
+        :root { --max-width: 1100px; --radius: 14px; }
+        .page{padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+        h1{margin:10px 0;color:#00f9ff;text-shadow:0 0 12px rgba(0,255,255,0.3);font-size:clamp(20px,3.2vw,34px);}
+        
+        #startScreen{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 50%, #0a1a1a, #000);padding:20px;}
+        .start-box{background:rgba(10,10,12,0.9);border-radius:var(--radius);padding:40px;width:92%;max-width:720px;text-align:center;border:1px solid rgba(0,255,255,0.2);}
+        
+        .btn{padding:12px 24px;border-radius:10px;border:none;cursor:pointer;font-weight:700;transition: 0.3s;font-size:16px;}
+        .btn-primary{background:#00f9ff;color:#000;}
+        .btn-ghost{background:transparent;border:1px solid #0ff;color:#0ff;}
+
+        #gameWrapper{display:none;width:100%;padding:18px 0;}
+        #container{width:95%;max-width:var(--max-width);background:#0a0a0c;border-radius:var(--radius);padding:20px;border:1px solid rgba(0,255,255,0.1);margin: 0 auto;}
+        
+        .scoreboard { display: flex; justify-content: center; gap: 30px; margin-bottom: 15px; background: #111; padding: 10px; border-radius: 10px; border: 1px solid #222; }
+        .score-val { display: block; font-size: 24px; font-weight: bold; color: #fff; }
+        .score-label { font-size: 12px; color: #0ff; text-transform: uppercase; }
+
+        .row{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap; margin-bottom: 15px;}
+        button.control{background:#00f9ff;color:#000;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;}
+        button.ghost{background:transparent;color:#0ff;border:1px solid rgba(0,255,255,0.3);}
+        input#wordInput{padding:12px;border-radius:8px;border:1px solid #0ff;background:#000;color:#fff;width:250px;font-size:18px;outline:none;}
+        input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #progress-container{width:100%;height:10px;background:#111;border-radius:5px;margin:10px 0;}
+        #progress-bar{height:100%;width:0%;background:#00f9ff;box-shadow:0 0 10px #0ff;transition:0.5s;}
+        #timer-container{width:100%;height:6px;background:#111;margin:10px 0;}
+        #timer-bar{height:100%;width:100%;background:#00ff00;transition:0.1s linear;}
+
+        #log{width:100%;height:200px;background:#050505;border-radius:8px;padding:15px;overflow-y:auto;border:1px solid #222;box-sizing:border-box;}
+        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px;}
+        .modal-content{width:100%;max-width:600px;background:#0d1117;border-radius:15px;border:1px solid #0ff;max-height:80vh;display:flex;flex-direction:column;}
+        .modal-body{padding:20px;overflow-y:auto;line-height:1.6;color:#ccc;}
+
+        #level-grid{display:grid;grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));gap:15px;max-width:800px;margin:30px auto;}
+        .level-btn{padding:20px;border-radius:12px;border:1px solid #333;background:#111;color:#fff;cursor:pointer;font-weight:bold;text-align: center;}
+        .level-btn.unlocked{border-color:#0ff;color:#0ff;}
+        .back-neon{background:none;border:1px solid #0ff;color:#0ff;padding:8px 15px;border-radius:5px;cursor:pointer;margin-bottom:20px;}
+    </style>
+</head>
+<body>
+
+    <!-- <div id="startScreen">
+        <div class="start-box">
+            <img src="image/wc.jpeg" alt="Logo" style="width: 80px; margin-bottom: 20px;">
+            <h1>WORD CHAIN AI</h1>
+            <div class="start-buttons">
+                <button class="btn btn-primary" onclick="startFromLanding()">PLAY GAME</button>
+                <button class="btn btn-ghost" onclick="toggleModal('instrModal', true)">INSTRUCTIONS</button>
+            </div>
+        </div>
+    </div> -->
+
+    <div id="startScreen">
+        <div class="start-box">
+            <h1>WORD CHAIN AI</h1>
+            <p style="color:#9ff; margin-bottom:30px;">Connect the words. Beat the clock. Outsmart the AI.</p>
+            <div class="start-buttons">
+                <button class="btn btn-primary" onclick="startFromLanding()">PLAY GAME</button>
+                <button class="btn btn-ghost" onclick="toggleModal('instrModal', true)">INSTRUCTIONS</button>
+            </div>
+        </div>
+    </div>
+    
+
+    <style>
+        #startScreen {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* SET THE IMAGE HERE */
+    /* linear-gradient adds a dark overlay so the white text stays visible */
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), 
+                url('wc.jpeg') no-repeat center center;
+    background-size: cover;
+    
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.start-box {
+    /* Glass Effect */
+    background: rgba(10, 10, 12, 0.8);
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px); /* For Safari support */
+    
+    border-radius: var(--radius);
+    padding: 50px 40px;
+    width: 92%;
+    max-width: 600px;
+    text-align: center;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+/* Ensure title looks good on background */
+h1 {
+    margin-bottom: 30px;
+    letter-spacing: 3px;
+}
+    </style>
+
+
+
+
+
+
+
+
+
+    <div id="levelSelect" style="display:none; padding:40px; text-align:center;">
+        <button class="back-neon" onclick="backToStart()">⬅ BACK TO MENU</button>
+        <h1>CHOOSE YOUR LEVEL</h1>
+        <div id="level-grid"></div>
+    </div>
+
+    <div id="gameWrapper">
+        <div class="page">
+            <div id="container">
+                <div class="row" style="justify-content: space-between;">
+                    <button class="back-neon" style="margin:0" onclick="backToLevels()">⬅ LEVELS</button>
+                    <div>
+                        <button class="control ghost" onclick="toggleModal('instrModal', true)">ℹ️ Rules</button>
+                        <button class="control ghost" onclick="toggleModal('journalModal', true)">📘 Journal</button>
+                    </div>
+                </div>
+
+                <div class="scoreboard">
+                    <div class="score-item">
+                        <span class="score-label">Player</span>
+                        <span id="pScore" class="score-val">0</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-label">AI</span>
+                        <span id="aScore" class="score-val">0</span>
+                    </div>
+                </div>
+
+                <div id="progress-container"><div id="progress-bar"></div></div>
+                <h2 id="status" style="text-align:center; color:#fff; margin:10px 0;">Level 1</h2>
+                <p id="hint" style="text-align:center; color:#0ff; font-weight:bold;"></p>
+                <div id="timer-container"><div id="timer-bar"></div></div>
+
+                <div class="row">
+                    <input id="wordInput" type="text" placeholder="Type word..." autocomplete="off">
+                    <button class="control" onclick="playerMove()">SUBMIT</button>
+                    <button id="pauseBtn" class="control ghost" onclick="togglePause()">⏸ PAUSE</button>
+                </div>
+
+                <div class="row">
+                    <button class="control ghost" onclick="restartLevel()">🔁 RESTART LEVEL</button>
+                    <button class="control ghost" onclick="resetProgress()">🔄 RESET PROGRESS</button>
+                </div>
+                <div id="log"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- <div id="instrModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-body">
+                <h2>Game Instructions</h2>
+                <p>Start with the last letter of the AI word. Reach 50 points to win!</p>
+                <button class="btn btn-primary" onclick="toggleModal('instrModal', false)">CLOSE</button>
+            </div>
+        </div>
+    </div> -->
+    <div id="instrModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-body">
+                <h2>Game Instructions</h2>
+            </div>
+            <div class="modal-body">
+                <h3>The Goal</h3>
+                <p>Build a chain of words with the AI. Each word must start with the <b>last letter</b> of the previous word.</p>
+                
+                <h3>Basic Rules</h3>
+                <ul>
+                    <li>You have a limited time per turn (it gets faster each level!).</li>
+                    <li>You cannot use the same word twice in one round.</li>
+                    <li>Words must be valid English words.</li>
+                </ul>
+
+                <h3>Scoring & Levels</h3>
+                <p>Win a round by outlasting the AI or reaching the points target. There are <b>21 Levels</b> in total. As you progress, the AI gets smarter and your timer gets shorter.</p>
+
+                <h3>The Word Journal</h3>
+                <p>Every valid word played is added to your Journal. Use this to learn definitions and expand your vocabulary for future rounds!</p>
+                <button class="btn btn-primary" onclick="toggleModal('instrModal', false)">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="journalModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-body">
+                <h2>📘 Word Journal</h2>
+                <div id="journalEntries"></div>
+            </div>
+            <button class="btn btn-primary" onclick="toggleModal('journalModal', false)">CLOSE</button>
+        </div>
+    </div>
+
+    <canvas id="confetti" class="canvas-confetti"></canvas>
+
+    <script>
+        const state = {
+            currentWord: '', usedWords: [],
+            playerScore: 0, aiScore: 0,
+            level: 1, unlocked: parseInt(localStorage.getItem('unlocked_v2') || '1'),
+            timeLeft: 10, turnTime: 10, isPaused: false,
+            journal: JSON.parse(localStorage.getItem('journal_v2') || '[]'),
+            timer: null
+        };
+
+        const dictionary = ['apple','elephant','tiger','rabbit','tree','eagle','egg','grape','ear','rat','table','earring','goat','top','pen','notebook','kangaroo','owl','lion','night','truck','kite','eggplant','tomato','orange','nose','engine','nest','tea','ant','toy','yak','rose','lamp','nut','pan','nail','leaf','fish','hat','tie','eye','yellow','wolf','fan','rain','nutmeg','mountain','river','cloud','piano','guitar','banana','strawberry','zebra','xylophone','ocean','north','house','umbrella','vulture','whale','yacht','zoo'];
+
+        const sfx = {
+            win: new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'),
+            lose: new Audio('https://assets.mixkit.co/active_storage/sfx/2501/2501-preview.mp3'),
+            pop: new Audio('https://assets.mixkit.co/active_storage/sfx/2004/2004-preview.mp3')
+        };
+
+        function $(id) { return document.getElementById(id); }
+        function toggleModal(id, show) { $(id).style.display = show ? 'flex' : 'none'; if(id === 'journalModal' && show) renderJournal(); }
+
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            $('pauseBtn').innerHTML = state.isPaused ? '▶ RESUME' : '⏸ PAUSE';
+            $('wordInput').disabled = state.isPaused;
+        }
+
+        function startFromLanding() { $('startScreen').style.display = 'none'; $('levelSelect').style.display = 'block'; renderLevels(); }
+        function backToStart() { $('levelSelect').style.display = 'none'; $('startScreen').style.display = 'flex'; }
+        function backToLevels() { clearInterval(state.timer); $('gameWrapper').style.display = 'none'; $('levelSelect').style.display = 'block'; renderLevels(); }
+
+        function renderLevels() {
+            const grid = $('level-grid'); grid.innerHTML = '';
+            for(let i=1; i<=21; i++) {
+                const btn = document.createElement('div');
+                btn.className = `level-btn ${i <= state.unlocked ? 'unlocked' : ''}`;
+                btn.innerHTML = i <= state.unlocked ? `LEVEL ${i}` : `🔒`;
+                btn.onclick = () => { if(i <= state.unlocked) { state.level = i; initLevel(); } };
+                grid.appendChild(btn);
+            }
+        }
+
+        function initLevel() {
+            $('levelSelect').style.display = 'none'; $('gameWrapper').style.display = 'block';
+            state.usedWords = []; state.playerScore = 0; state.aiScore = 0; state.isPaused = false;
+            state.turnTime = Math.max(3, 11 - state.level);
+            state.currentWord = dictionary[Math.floor(Math.random() * dictionary.length)];
+            state.usedWords.push(state.currentWord);
+            
+            // Fix: Re-enable input for new level
+            $('wordInput').disabled = false;
+            $('wordInput').value = '';
+            
+            $('log').innerHTML = `<p style="color:#aaa">--- Level ${state.level} Started ---</p>`;
+            logMsg(`AI started with: <b>${state.currentWord.toUpperCase()}</b>`, 'ai');
+            updateUI();
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(state.timer);
+            state.timeLeft = state.turnTime;
+            state.timer = setInterval(() => {
+                if(state.isPaused) return;
+                state.timeLeft -= 0.1;
+                $('timer-bar').style.width = `${(state.timeLeft / state.turnTime) * 100}%`;
+                if(state.timeLeft <= 0) {
+                    clearInterval(state.timer);
+                    determineWinner();
+                }
+            }, 100);
+        }
+
+        async function playerMove() {
+            if(state.isPaused) return;
+            const input = $('wordInput');
+            const val = input.value.toLowerCase().trim();
+            input.value = '';
+
+            if(!val) return;
+
+            // Stop timer while showing validation popup
+            if(val[0] !== state.currentWord.slice(-1)) {
+                showOutcomePopup('invalid', 'Invalid Start!', `Word must start with "${state.currentWord.slice(-1).toUpperCase()}".`, 2500, false, true);
+                return;
+            }
+
+            if(state.usedWords.includes(val)) {
+                showOutcomePopup('invalid', 'Repeated Word!', `"${val.toUpperCase()}" already used.`, 2500, false, true);
+                return;
+            }
+
+            const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${val}`);
+            if(!res.ok) {
+                showOutcomePopup('invalid', 'Wrong Word!', `"${val.toUpperCase()}" is not a valid word.`, 2500, false, true);
+                return;
+            }
+
+            sfx.pop.play();
+            const data = await res.json();
+            const def = data[0].meanings[0].definitions[0].definition;
+            
+            state.usedWords.push(val);
+            state.currentWord = val;
+            state.playerScore += 10;
+            logMsg(`YOU: ${val.toUpperCase()}`, 'player');
+            state.journal.unshift({word: val, def: def});
+            localStorage.setItem('journal_v2', JSON.stringify(state.journal.slice(0,50)));
+            
+            clearInterval(state.timer);
+            updateUI();
+            if(state.playerScore >= 50) determineWinner();
+            else setTimeout(aiMove, 800);
+        }
+
+        function aiMove() {
+            if(state.isPaused) return;
+            const char = state.currentWord.slice(-1);
+            const possible = dictionary.filter(w => w[0] === char && !state.usedWords.includes(w));
+            
+            if(possible.length === 0) {
+                determineWinner();
+                return;
+            }
+
+            const choice = possible[Math.floor(Math.random() * possible.length)];
+            state.usedWords.push(choice);
+            state.currentWord = choice;
+            state.aiScore += 10;
+            logMsg(`AI: ${choice.toUpperCase()}`, 'ai');
+            updateUI();
+            if(state.aiScore >= 50) determineWinner();
+            else startTimer();
+        }
+
+        function determineWinner() {
+            clearInterval(state.timer);
+            $('wordInput').disabled = true;
+            
+            let popupType = 'tie';
+            let title = "It's a Tie! ⚖️";
+            let msg = `Final Score: ${state.playerScore} - ${state.aiScore}`;
+
+            if(state.playerScore > state.aiScore) {
+                sfx.win.play();
+                triggerConfetti();
+                popupType = 'player';
+                title = "Player Wins This Level! 🏆";
+                msg = `You outscored the AI ${state.playerScore} to ${state.aiScore}!`;
+                if(state.level === state.unlocked) {
+                    state.unlocked++;
+                    localStorage.setItem('unlocked_v2', state.unlocked);
+                }
+            } else if (state.aiScore > state.playerScore) {
+                sfx.lose.play();
+                popupType = 'ai';
+                title = "AI Wins This Level! 🤖";
+                msg = `The AI beat you ${state.aiScore} to ${state.playerScore}.`;
+            }
+
+            showOutcomePopup(popupType, title, msg, 5000, true);
+        }
+
+        function showOutcomePopup(type, title, message, duration, isGameOver = false, isValidation = false) {
+            // Pause timer if it's a validation error
+            if(isValidation) state.isPaused = true;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'outcome-backdrop';
+            overlay.innerHTML = `
+                <div class="outcome-popup">
+                    <h2 class="outcome-title">${title}</h2>
+                    <p class="outcome-msg">${message}</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            setTimeout(() => {
+                overlay.remove();
+                if(isValidation) state.isPaused = false; // Resume timer
+                if(isGameOver) backToLevels();
+            }, duration);
+        }
+
+        function triggerConfetti() {
+            const canvas = $('confetti');
+            canvas.style.display = 'block';
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const particles = Array.from({length: 80}, () => ({
+                x: Math.random() * canvas.width, y: -10,
+                v: Math.random() * 4 + 2, c: `hsl(${Math.random() * 360}, 100%, 50%)`
+            }));
+            function frame() {
+                ctx.clearRect(0,0,canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.y += p.v;
+                    ctx.fillStyle = p.c;
+                    ctx.fillRect(p.x, p.y, 6, 6);
+                });
+                if(particles[0].y < canvas.height) requestAnimationFrame(frame);
+                else canvas.style.display = 'none';
+            }
+            frame();
+        }
+
+        function logMsg(text, type) {
+            const p = document.createElement('p');
+            p.innerHTML = text;
+            p.style.color = type === 'ai' ? '#0ff' : '#00f9ff';
+            $('log').prepend(p);
+        }
+
+        function updateUI() {
+            $('pScore').textContent = state.playerScore;
+            $('aScore').textContent = state.aiScore;
+            $('status').textContent = `Level ${state.level}`;
+            $('hint').textContent = `NEXT LETTER: ${state.currentWord.slice(-1).toUpperCase()}`;
+            $('progress-bar').style.width = `${((state.unlocked - 1) / 21) * 100}%`;
+        }
+
+        function renderJournal() {
+            $('journalEntries').innerHTML = state.journal.map(j => `
+                <div style="margin-bottom:10px; border-bottom:1px solid #222; padding-bottom:5px;">
+                    <b style="color:#0ff">${j.word.toUpperCase()}</b><br>
+                    <small>${j.def}</small>
+                </div>
+            `).join('') || "No words discovered yet.";
+        }
+
+        function restartLevel() { clearInterval(state.timer); initLevel(); }
+        function resetProgress() { if(confirm("Reset everything?")) { localStorage.clear(); location.reload(); } }
+
+        window.onkeydown = (e) => { if(e.key === 'Enter') playerMove(); };
+    </script>
+</body>
+</html>
